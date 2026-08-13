@@ -14,7 +14,7 @@ public class App extends Application {
         Parent root = loader.load();
 
         primaryStage.setTitle("Gestión de Agenda");
-        primaryStage.setScene(new Scene(root, 750, 500));
+        primaryStage.setScene(new Scene(root, 500, 700));
         primaryStage.show();
     }
 

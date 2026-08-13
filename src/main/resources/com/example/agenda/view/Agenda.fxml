@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<HBox prefHeight="500.0" prefWidth="750.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.agenda.view.AgendaViewController">
+<HBox prefHeight="700.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.agenda.view.AgendaViewController">
     <children>
         <!-- PANEL IZQUIERDO: LISTA DE PERSONAS -->
         <VBox prefWidth="250.0" style="-fx-background-color: #f4f4f4; -fx-border-color: #cccccc; -fx-border-width: 0 1 0 0;">
@@ -96,13 +96,8 @@
                         <TextField fx:id="txtDireccion" promptText="Ej. Calle Falsa 123" />
 
                         <Label text="Teléfonos:" />
-                        <HBox spacing="10.0">
-                            <children>
-                                <TextField fx:id="txtNuevoTelefono" promptText="Número de teléfono" HBox.hgrow="ALWAYS" />
-                                <Button mnemonicParsing="false" onAction="#handleAgregarTelefono" text="Agregar" />
-                            </children>
-                        </HBox>
-                        <ListView fx:id="listaTelefonosEdicion" prefHeight="120.0" />
+                        <!-- CONTENEDOR DINÁMICO PARA LOS TELÉFONOS -->
+                        <VBox fx:id="vboxTelefonosContenedor" spacing="10.0" />
 
                         <HBox alignment="CENTER_RIGHT" spacing="10.0">
                             <children>

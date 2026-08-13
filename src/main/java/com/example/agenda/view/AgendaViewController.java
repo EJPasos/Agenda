@@ -6,53 +6,48 @@ import com.example.agenda.model.Telefono;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class AgendaViewController {
 
-    // --- Componentes del Panel Izquierdo ---
     @FXML private ListView<Persona> listaPersonas;
 
-    // --- Paneles de Estado ---
     @FXML private VBox panelBienvenida;
     @FXML private VBox panelVista;
     @FXML private VBox panelEdicion;
 
-    // --- Componentes Panel Vista ---
     @FXML private Label lblNombreVista;
     @FXML private Label lblDireccionVista;
     @FXML private ListView<String> listaTelefonosVista;
 
-    // --- Componentes Panel Edición ---
     @FXML private Label lblTituloEdicion;
     @FXML private TextField txtNombre;
     @FXML private TextField txtDireccion;
-    @FXML private TextField txtNuevoTelefono;
-    @FXML private ListView<String> listaTelefonosEdicion;
 
-    // --- Variables de Estado y Controladores ---
+    // Nuevo contenedor dinámico
+    @FXML private VBox vboxTelefonosContenedor;
+
     private AgendaController controller;
     private ObservableList<Persona> personasData;
-    private ObservableList<String> telefonosEdicionData;
-    private Persona personaEnPantalla = null; // null si es una nueva persona
+    private Persona personaEnPantalla = null;
 
     @FXML
     public void initialize() {
         controller = new AgendaController();
         personasData = FXCollections.observableArrayList();
-        telefonosEdicionData = FXCollections.observableArrayList();
-
         listaPersonas.setItems(personasData);
-        listaTelefonosEdicion.setItems(telefonosEdicionData);
 
         cargarContactos();
         mostrarPanelBienvenida();
 
-        // Listener: Cuando se hace click en un nombre de la lista izquierda
         listaPersonas.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 mostrarPanelVista(newVal);
@@ -64,8 +59,6 @@ public class AgendaViewController {
         personasData.clear();
         personasData.addAll(controller.obtenerPersonas());
     }
-
-    // --- MÉTODOS DE CAMBIO DE ESTADO (VISIBILIDAD) ---
 
     private void mostrarPanelBienvenida() {
         panelBienvenida.setVisible(true);
@@ -92,21 +85,27 @@ public class AgendaViewController {
 
     private void mostrarPanelEdicion(Persona persona) {
         personaEnPantalla = persona;
-        telefonosEdicionData.clear();
-        txtNuevoTelefono.clear();
+        vboxTelefonosContenedor.getChildren().clear(); // Limpiamos los campos anteriores
 
         if (persona == null) {
-            // Es un ALTA
             lblTituloEdicion.setText("Nueva Persona");
             txtNombre.clear();
             txtDireccion.clear();
+            agregarCampoTelefono("", true); // Agrega 1 campo vacío con el botón "+"
         } else {
-            // Es una MODIFICACIÓN
             lblTituloEdicion.setText("Modificar Persona");
             txtNombre.setText(persona.getNombre());
             txtDireccion.setText(persona.getDireccion());
-            for (Telefono t : persona.getTelefonos()) {
-                telefonosEdicionData.add(t.getTelefono());
+
+            List<Telefono> tels = persona.getTelefonos();
+            if (tels.isEmpty()) {
+                agregarCampoTelefono("", true);
+            } else {
+                // Iteramos los teléfonos existentes para crear sus campos
+                for (int i = 0; i < tels.size(); i++) {
+                    boolean esElUltimo = (i == tels.size() - 1);
+                    agregarCampoTelefono(tels.get(i).getTelefono(), esElUltimo);
+                }
             }
         }
 
@@ -115,7 +114,27 @@ public class AgendaViewController {
         panelEdicion.setVisible(true);
     }
 
-    // --- MÉTODOS DE ACCIÓN (BOTONES) ---
+    // --- LÓGICA DE CAMPOS DINÁMICOS ---
+    private void agregarCampoTelefono(String texto, boolean incluirBotonPlus) {
+        HBox hbox = new HBox(10);
+        TextField txtTel = new TextField(texto);
+        txtTel.setPromptText("Número de teléfono");
+        HBox.setHgrow(txtTel, Priority.ALWAYS); // Para que el input ocupe todo el ancho
+
+        hbox.getChildren().add(txtTel);
+
+        if (incluirBotonPlus) {
+            Button btnPlus = new Button("+");
+            // Acción al presionar el "+"
+            btnPlus.setOnAction(e -> {
+                hbox.getChildren().remove(btnPlus);
+                agregarCampoTelefono("", true);
+            });
+            hbox.getChildren().add(btnPlus);
+        }
+
+        vboxTelefonosContenedor.getChildren().add(hbox);
+    }
 
     @FXML
     private void handleNuevaPersona() {
@@ -136,7 +155,7 @@ public class AgendaViewController {
             Alert alerta = new Alert(Alert.AlertType.CONFIRMATION);
             alerta.setTitle("Confirmar Eliminación");
             alerta.setHeaderText("Vas a eliminar a " + personaEnPantalla.getNombre());
-            alerta.setContentText("¿Estás seguro? Esta acción borrará también sus teléfonos.");
+            alerta.setContentText("¿Estás seguro?");
 
             Optional<ButtonType> resultado = alerta.showAndWait();
             if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
@@ -145,18 +164,9 @@ public class AgendaViewController {
                     cargarContactos();
                     mostrarPanelBienvenida();
                 } else {
-                    mostrarError("No se pudo eliminar a la persona en la base de datos.");
+                    mostrarError("No se pudo eliminar a la persona.");
                 }
             }
-        }
-    }
-
-    @FXML
-    private void handleAgregarTelefono() {
-        String tel = txtNuevoTelefono.getText();
-        if (tel != null && !tel.trim().isEmpty()) {
-            telefonosEdicionData.add(tel);
-            txtNuevoTelefono.clear();
         }
     }
 
@@ -164,9 +174,22 @@ public class AgendaViewController {
     private void handleGuardar() {
         String nombre = txtNombre.getText();
         String direccion = txtDireccion.getText();
-        List<String> telefonos = new ArrayList<>(telefonosEdicionData);
+        List<String> telefonos = new ArrayList<>();
 
-        // Validación básica exigiendo al menos nombre y un teléfono
+        // Recorremos los campos dinámicos para extraer los números
+        for (Node nodo : vboxTelefonosContenedor.getChildren()) {
+            if (nodo instanceof HBox) {
+                HBox hbox = (HBox) nodo;
+                TextField txt = (TextField) hbox.getChildren().get(0); // El TextField siempre es el índice 0
+                String tel = txt.getText();
+
+                // Si el usuario dejó el campo vacío, simplemente lo ignoramos
+                if (tel != null && !tel.trim().isEmpty()) {
+                    telefonos.add(tel.trim());
+                }
+            }
+        }
+
         if (nombre == null || nombre.trim().isEmpty()) {
             mostrarError("El nombre es obligatorio.");
             return;
@@ -197,7 +220,6 @@ public class AgendaViewController {
             mostrarPanelBienvenida();
         } else {
             mostrarPanelVista(personaEnPantalla);
-            // Reseleccionar en la lista
             listaPersonas.getSelectionModel().select(personaEnPantalla);
         }
     }
